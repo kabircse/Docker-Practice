@@ -23,3 +23,9 @@ Replace [service] with a service name (e.g. nginx) to display this service's log
 
 8. ```docker-compose down -v --rmi all```
 -> Delete everything, including images
+
+9. ```docker-compose exec```
+-> To run bash on a running container
+
+10. ```docker-compose run php -m```
+-> To run bash on a new container
