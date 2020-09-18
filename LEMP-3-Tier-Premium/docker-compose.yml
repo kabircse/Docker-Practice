@@ -1,0 +1,99 @@
+version: '3.7'
+
+# Services
+services:
+  # Ngrok Service
+  ngrok:
+    image: wernight/ngrok:latest
+    ports:
+      - 4040:4040
+    environment:
+      NGROK_PROTOCOL: http
+      NGROK_PORT: nginx:443
+      NGROK_AUTH: ${NGROK_AUTH}
+    depends_on:
+      - nginx
+
+  # Nginx Service
+  nginx:
+    image: nginx:1.17-alpine
+    ports:
+      - 80:80
+    volumes:
+      - ./src/backend:/var/www/backend:ro,delegated
+      - ./.docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - phpmyadmin-data:/usr/src/phpmyadmin:delegated
+    depends_on:
+      - backend
+      - phpmyadmin
+  
+  # Backend Service
+  backend:
+    build:
+      context: ./src/backend
+      target: backend
+    working_dir: /var/www/backend
+    volumes:
+      - ./src/backend:/var/www/backend:delegated
+    depends_on:
+      - mysql
+      - redis
+
+  # Frontend Service
+  frontend:
+    build: ./src/frontend
+    working_dir: /var/www/frontend
+    volumes:
+      - ./src/frontend:/var/www/frontend:delegated
+    depends_on:
+      - backend
+      
+  # Redis Service
+  redis:
+    image: redis:6-alpine
+    command: [ "redis-server", "--appendonly", "yes" ]
+    volumes:
+      - redis-data:/data
+    ports:
+      - 6379:6379
+
+  # MySQL Service
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: demo
+    volumes:
+      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - mysql-data:/var/lib/mysql:delegated
+  
+  # PhpMyAdmin Service
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5-fpm-alpine
+    environment:
+      PMA_HOST: mysql
+    volumes:
+      - phpmyadmin-data:/usr/src/phpmyadmin:delegated
+    depends_on:
+      - mysql
+      - redis
+  
+  # Worker Service
+  worker:
+    build:
+      context: ./src/backend
+      target: worker
+    working_dir: /var/www/backend
+    volumes:
+      - ./src/backend:/var/www/backend:delegated
+    depends_on:
+      - backend
+      
+# Volumes
+volumes:
+  
+  mysql-data:
+  
+  phpmyadmin-data:
+  
+  redis-data:
